@@ -1,100 +1,128 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:greenvolt/screens/area.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+import 'package:greenvolt/providers/theme_notifier.dart';
+import 'package:greenvolt/providers/zone_provider.dart';
+import 'package:greenvolt/screens/energy_control.dart';
 import 'package:greenvolt/screens/weather.dart';
-import 'screens/welcome_screen.dart'; // Import the WelcomeScreen file
+import 'package:greenvolt/screens/zones_screen.dart';
+import 'screens/welcome_screen.dart';
 import 'screens/login_form.dart';
 import 'screens/register_form.dart';
 import 'screens/home.dart';
 import 'screens/battery.dart';
 
-// Main function
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   try {
     await Firebase.initializeApp(
-      options: FirebaseOptions(
-        apiKey: "AIzaSyAC5Wgu2FSAY_JOmWDiu7U5F0DxLbnbZP8",
-        appId: "1:233738305831:android:236b5839c6a0673b666902",
-        messagingSenderId: "233738305831",
-        projectId: "greenvolt-480dd",
-        databaseURL: 'https://greenvolt-480dd-default-rtdb.firebaseio.com/',
+      options: const FirebaseOptions(
+        apiKey: "AIzaSyD2_QPWqZ8dwF0427WbFEzbL0wEB5wHq7Y",
+        appId: "1:532993898377:web:40342715409f5b0bf95358",
+        messagingSenderId: "532993898377",
+        projectId: "energymanagementsystem-15dd9",
+        databaseURL:
+            "https://energymanagementsystem-15dd9-default-rtdb.firebaseio.com",
+        storageBucket:
+            "energymanagementsystem-15dd9.firebasestorage.app",
       ),
     );
-    print("✅ Firebase initialized successfully!");
   } catch (e) {
-    print("❌ Error initializing Firebase: ${e.toString()}");
     return;
   }
 
-  runApp(const MyApp());
-
-  // Listen for Firebase Authentication state changes
-  FirebaseAuth.instance.authStateChanges().listen((User? user) {
-    if (user == null) {
-      print("No user is signed in.");
-    } else {
-      print("User is signed in: ${user.uid}");
-    }
-  });
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => ThemeNotifier()),
+        ChangeNotifierProvider(create: (_) => ZoneProvider()),
+      ],
+      child: const MyApp(),
+    ),
+  );
 }
 
-// MyApp class
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    print("✅ Building MyApp");
+    final themeNotifier = context.watch<ThemeNotifier>();
+
+    ThemeData buildTheme(Brightness brightness) {
+      final dark = brightness == Brightness.dark;
+      final base = ColorScheme.fromSeed(
+        seedColor: const Color(0xFF00C853),
+        brightness: brightness,
+      );
+      return ThemeData(
+        brightness: brightness,
+        colorScheme: base,
+        scaffoldBackgroundColor:
+            dark ? const Color(0xFF0A1410) : const Color(0xFFF3F8F4),
+        cardColor: dark ? const Color(0xFF111D16) : Colors.white,
+        dialogTheme: DialogThemeData(
+          backgroundColor: dark ? const Color(0xFF111D16) : Colors.white,
+        ),
+        textTheme: GoogleFonts.dmSansTextTheme().apply(
+          bodyColor:
+              dark ? const Color(0xFFDFF0E8) : const Color(0xFF0D1F15),
+          displayColor:
+              dark ? const Color(0xFFDFF0E8) : const Color(0xFF0D1F15),
+        ),
+        useMaterial3: true,
+      );
+    }
 
     return MaterialApp(
-      initialRoute: '/',
-      routes: {
-        '/signup': (context) => RegisterScreen(),
-        '/login': (context) => const LoginScreen(),
-        '/home': (context) => const HomePage(),
-        '/welcome': (context) => const WelcomeScreen(),
-        '/battery': (context) => const BatteryPage(),
-        '/weather': (context) => WeatherScreen(),
-      },
-      onGenerateRoute: (settings) {
-        if (settings.name == '/area') {
-          final args = settings.arguments as Map<String, dynamic>?;
-          if (args != null) {
-            return MaterialPageRoute(
-              builder: (context) => AreaPage(
-                areaId: args['areaId'],
-                areaName: args['areaName'],
-              ),
-            );
-          } else {
-            return MaterialPageRoute(
-              builder: (context) => const HomePage(), // Fallback route
-            );
-          }
-        }
-        return null;
-      },
-      title: 'Flutter Demo',
+      title: 'EnerCamp',
       debugShowCheckedModeBanner: false,
+      themeMode: themeNotifier.mode,
+      theme: buildTheme(Brightness.light),
+      darkTheme: buildTheme(Brightness.dark),
+      routes: {
+        '/welcome': (_) => const WelcomeScreen(),
+        '/login':   (_) => const LoginScreen(),
+        '/signup':  (_) => RegisterScreen(),
+        '/home':    (_) => const HomePage(),
+        '/zones':   (_) => const ZonesScreen(),
+        '/control': (_) => const EnergyControlPage(),
+        '/weather': (_) => WeatherScreen(),
+        '/battery': (_) => const BatteryPage(),
+      },
       home: StreamBuilder<User?>(
         stream: FirebaseAuth.instance.authStateChanges(),
-        builder: (context, snapshot) {
-          print("✅ StreamBuilder triggered");
-
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            print("✅ Showing loading screen");
-            return const Center(child: CircularProgressIndicator());
+        builder: (context, snap) {
+          if (snap.connectionState == ConnectionState.waiting) {
+            return Scaffold(
+              backgroundColor: const Color(0xFF0D2318),
+              body: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: const Color(0xFF00C853).withValues(alpha: 0.15),
+                        border: Border.all(
+                            color: const Color(0xFF00C853).withValues(alpha: 0.3)),
+                      ),
+                      child: const Icon(Icons.bolt_rounded,
+                          color: Color(0xFF00C853), size: 40),
+                    ),
+                    const SizedBox(height: 20),
+                    const CircularProgressIndicator(
+                        color: Color(0xFF00C853), strokeWidth: 2),
+                  ],
+                ),
+              ),
+            );
           }
-
-          if (snapshot.hasData) {
-            print("✅ User is signed in, navigating to HomePage");
-            return const HomePage();
-          }
-
-          print("✅ No user signed in, navigating to WelcomeScreen");
+          if (snap.hasData) return const HomePage();
           return const WelcomeScreen();
         },
       ),
