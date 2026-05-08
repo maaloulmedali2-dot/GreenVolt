@@ -1,0 +1,20 @@
+workflows:
+  ios-unsigned:
+    name: iOS Unsigned Build
+    instance_type: mac_mini_m2
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+    scripts:
+      - name: Get packages
+        script: flutter pub get
+      - name: Build unsigned iOS app
+        script: |
+          flutter build ios --release --no-codesign
+          cd build/ios/iphoneos
+          mkdir Payload
+          cp -r Runner.app Payload
+          zip -r EnergyFlow.ipa Payload
+    artifacts:
+      - build/ios/iphoneos/EnergyFlow.ipa
